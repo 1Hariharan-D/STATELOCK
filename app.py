@@ -23,9 +23,13 @@ from dfa_engine import DFAEngine, CustomDFAEngine
 import database as db
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "statelock_master_key_toc_2026_dfa")
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "statelock-local-development-key-change-in-production"
+)
 
 # Session security configuration
+app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)

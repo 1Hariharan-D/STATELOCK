@@ -954,18 +954,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Highlight Breakdown Table Row
-            document.querySelectorAll('#pg-breakdown-tbody tr').forEach(r => {
-                r.classList.remove('pg-active-row', 'pg-error-row');
-            });
-            if (stepIdx > 0) {
+            // During animation: gold = current step in progress
+            // At final step: green = valid transition, red = trap/invalid transition
+            const isFinalStep = (stepIdx >= totalSteps);
+            document.querySelectorAll('#pg-breakdown-tbody tr').forEach(r =>
+                r.classList.remove('pg-active-row', 'pg-valid-row', 'pg-error-row')
+            );
+            if (isFinalStep) {
+                // Final state: colour every row by its own result
+                transitions.forEach((tr, i) => {
+                    const row = document.getElementById(`pg-brow-${i}`);
+                    if (row) {
+                        row.classList.add(tr.is_valid ? 'pg-valid-row' : 'pg-error-row');
+                    }
+                });
+            } else if (stepIdx > 0) {
+                // Mid-animation: gold highlight on the just-completed row
                 const activeRow = document.getElementById(`pg-brow-${stepIdx - 1}`);
                 if (activeRow) {
-                    const tr = transitions[stepIdx - 1];
-                    if (tr && tr.is_valid) {
-                        activeRow.classList.add('pg-active-row');
-                    } else {
-                        activeRow.classList.add('pg-error-row');
-                    }
+                    activeRow.classList.add('pg-active-row');
                     activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }
@@ -1011,14 +1018,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 pgStatusBanner.className = `pg-status-banner ${isAccepted ? 'granted' : 'denied'}`;
                 pgStatusIcon.textContent = isAccepted ? '🔓' : '🔒';
                 pgStatusTitle.textContent = isAccepted ? 'ACCEPTED' : 'REJECTED';
-                pgStatusMsg.textContent   = this.data.message || '';
+
+                // Build a clear, specific status message
+                const finalSt = this.data.final_state;
+                let statusMsg;
+                if (isAccepted) {
+                    statusMsg = this.data.message || `String accepted — final state ${finalSt} is an accepting state.`;
+                } else if (finalSt === 'DEAD') {
+                    statusMsg = `String rejected — an undefined transition was taken, reaching the DEAD trap state.`;
+                } else {
+                    // Rejected because final state is non-accepting (all transitions were valid)
+                    const hadTrap = (this.data.transitions || []).some(t => !t.is_valid);
+                    if (hadTrap) {
+                        statusMsg = this.data.message || `String rejected — ended in non-accepting state ${finalSt}.`;
+                    } else {
+                        statusMsg = `String rejected — all transitions were valid, but final state ${finalSt} is non-accepting.`;
+                    }
+                }
+                pgStatusMsg.textContent = statusMsg;
 
                 if (isAccepted) {
-                    pgFinalBadge.textContent = `Final: ${this.data.final_state} (Accepting)`;
-                } else if (this.data.final_state === 'DEAD') {
+                    pgFinalBadge.textContent = `Final: ${finalSt} (Accepting)`;
+                } else if (finalSt === 'DEAD') {
                     pgFinalBadge.textContent = `Final: DEAD (Trap State)`;
                 } else {
-                    pgFinalBadge.textContent = `Final: ${this.data.final_state} (Non-Accepting)`;
+                    pgFinalBadge.textContent = `Final: ${finalSt} (Non-Accepting)`;
                 }
 
                 pgStepBtn.disabled = true;
