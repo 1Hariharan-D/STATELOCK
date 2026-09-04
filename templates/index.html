@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StateLock - DFA Authentication & Security System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dark-theme" {% if open_history %}data-open-history="true"{% endif %} {% if unauthorized_history %}data-unauthorized-history="true"{% endif %} {% if unauthorized_dashboard %}data-unauthorized-dashboard="true"{% endif %}>
+    <div class="app-container">
+        <!-- Header with User Session Controls -->
+        <header class="app-header">
+            <div class="brand-row">
+                <div class="brand-logo">
+                    <span class="logo-icon">🔒</span>
+                    <div class="logo-text">
+                        <h1>StateLock</h1>
+                        <span class="badge toc-badge">Theory of Computation</span>
+                    </div>
+                </div>
+                
+                <!-- Session / User Bar & Navigation -->
+                <div class="user-session-bar">
+                    <a href="/playground" id="nav-to-playground-btn" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                        ⚙ DFA Playground
+                    </a>
+                    
+                    <div id="logged-out-view" class="user-pill-group">
+                        <span class="status-indicator-dot"></span>
+                        <span class="session-label">Security & Protection</span>
+                    </div>
+                    
+                    <div id="logged-in-view" class="user-pill-group" style="display: none;">
+                        <span class="user-greeting">👤 <strong id="session-username">User</strong></span>
+                        <a href="/dashboard" id="nav-dashboard-btn" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                            📊 Dashboard
+                        </a>
+                        <a href="/history" id="nav-history-btn" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                            📜 Authentication History
+                        </a>
+                        <button type="button" id="nav-change-passcode-btn" class="nav-btn nav-btn-gold">
+                            🔑 Change Passcode
+                        </button>
+                        <button type="button" id="nav-logout-btn" class="nav-btn nav-btn-subtle">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="main-layout">
+            <!-- Left Column: Authentication & Registration Console -->
+            <section class="auth-section card">
+                <!-- Logged In User Dashboard (Visible when Authenticated) -->
+                <div id="logged-in-dashboard" class="logged-in-dashboard" style="display: none; margin-bottom: 16px; padding: 14px 16px; border: 1.5px solid var(--gold-border); border-radius: var(--radius-md); background: rgba(212, 175, 55, 0.05);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">Active Account</span>
+                        <span style="font-size: 0.88rem; color: var(--gold-bright); font-weight: 700;">👤 <span id="dash-username">User</span></span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <a href="/dashboard" id="dash-dashboard-btn" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; text-decoration: none;">
+                            📊 Analytics Dashboard
+                        </a>
+                        <button type="button" id="dash-history-btn" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                            📜 Authentication History
+                        </button>
+                        <button type="button" id="dash-change-passcode-btn" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            🔑 Change Passcode
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mode Switcher Tabs (Login / Register / Demo) -->
+                <div class="mode-tabs">
+                    <button type="button" id="tab-login" class="mode-tab active">
+                        🔑 Login
+                    </button>
+                    <button type="button" id="tab-register" class="mode-tab">
+                        ✨ Register
+                    </button>
+                    <button type="button" id="tab-demo" class="mode-tab">
+                        🧪 Demo Mode
+                    </button>
+                </div>
+
+                <!-- Form Card Body -->
+                <form id="auth-form" class="auth-form" onsubmit="return false;">
+                    <!-- Username Field (for Login / Register) -->
+                    <div id="username-group" class="input-group">
+                        <label for="username-input">Username</label>
+                        <input 
+                            type="text" 
+                            id="username-input" 
+                            name="username" 
+                            class="text-input" 
+                            placeholder="Enter username" 
+                            autocomplete="username"
+                            maxlength="24"
+                        >
+                    </div>
+
+                    <!-- Passcode Field (4 Characters) -->
+                    <div class="input-group">
+                        <div class="input-label-row">
+                            <label for="sequence-input" id="passcode-label">4-Character Passcode</label>
+                            <span class="char-hint">0-9, a-z, A-Z, @#$%*!</span>
+                        </div>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="sequence-input" 
+                                name="sequence" 
+                                class="sequence-input" 
+                                placeholder="••••" 
+                                autocomplete="off"
+                                maxlength="4"
+                                spellcheck="false"
+                                aria-label="Enter 4-character passcode"
+                            >
+                            <button type="button" id="clear-input-btn" class="clear-input-btn" title="Clear text">&times;</button>
+                        </div>
+                        <div id="input-validation-msg" class="validation-msg"></div>
+                    </div>
+
+                    <!-- Failed Attempts Counter Badge -->
+                    <div id="failed-attempts-badge" class="failed-attempts-badge" style="display: none;">
+                        <span class="attempts-icon">🛡️</span>
+                        <span class="attempts-text">Failed Attempts:</span>
+                        <span id="failed-attempts-counter" class="failed-attempts-pill">0/5 failed</span>
+                    </div>
+
+                    <!-- Temporary Account Lockout Banner with 60s Countdown Timer -->
+                    <div id="lockout-banner" class="lockout-banner" style="display: none;">
+                        <div class="lockout-header">
+                            <span class="lockout-icon">⏳</span>
+                            <div class="lockout-heading">
+                                <strong>Account Temporarily Locked</strong>
+                                <span class="lockout-subtitle">5 consecutive failed attempts reached</span>
+                            </div>
+                        </div>
+                        <div class="lockout-countdown-box">
+                            <span class="lockout-timer-label">Unlocking in:</span>
+                            <span id="lockout-timer-val" class="lockout-timer-val">60s</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="button-group">
+                        <button type="submit" id="submit-btn" class="btn btn-primary">
+                            Authenticate (DFA)
+                        </button>
+                        <button type="button" id="reset-btn" class="btn btn-secondary">
+                            Reset
+                        </button>
+                    </div>
+
+                    <!-- Preset Quick Test Buttons (Shown in Demo Mode) -->
+                    <div id="quick-test-section" class="quick-test-section">
+                        <span class="quick-test-label">Quick Test Cases (Demo):</span>
+                        <div class="quick-test-grid">
+                            <button type="button" class="preset-btn test-accept" data-seq="3412">
+                                <strong>Sample Match</strong> <span class="tag tag-pass">ACCEPT</span>
+                                <!-- 3412 -->
+                            </button>
+                            <button type="button" class="preset-btn test-reject" data-seq="3419">
+                                <strong>Sample 3419</strong> <span class="tag tag-fail">REJECT (4th)</span>
+                            </button>
+                            <button type="button" class="preset-btn test-reject" data-seq="3492">
+                                <strong>Sample 3492</strong> <span class="tag tag-fail">REJECT (3rd)</span>
+                            </button>
+                            <button type="button" class="preset-btn test-reject" data-seq="1234">
+                                <strong>Sample 1234</strong> <span class="tag tag-fail">REJECT (1st)</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Column: Visualization & Results / History / Change Passcode Area -->
+            <section class="visualizer-section">
+                <!-- Visual DFA Diagram Card -->
+                <div id="diagram-panel" class="card diagram-card">
+                    <div class="card-header">
+                        <h2><span class="section-icon">📐</span> DFA State Machine</h2>
+                        <span id="target-pattern-hint" class="dfa-spec-note">q0 ➔ q1 ➔ q2 ➔ q3 ➔ q4</span>
+                    </div>
+
+                    <!-- History Replay Notification Bar (if inspecting history) -->
+                    <div id="history-replay-banner" class="history-replay-banner" style="display: none;">
+                        <span id="history-replay-text">📜 Viewing Historical Attempt #1 (Input: A7#9)</span>
+                        <button type="button" id="back-to-history-btn" class="btn btn-secondary btn-sm">
+                            Back to History
+                        </button>
+                    </div>
+
+                    <!-- Live Animation HUD -->
+                    <div id="animation-hud" class="animation-hud" style="display: none;">
+                        <div class="hud-top-bar">
+                            <div class="hud-stream-wrapper">
+                                <span class="hud-label">Input Stream:</span>
+                                <div id="symbol-stream" class="symbol-stream">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                            <div class="hud-state-wrapper">
+                                <span class="hud-label">Current State:</span>
+                                <span id="hud-current-state" class="hud-state-pill">q0</span>
+                            </div>
+                            <div class="hud-step-wrapper">
+                                <span class="hud-label">Progress:</span>
+                                <span id="hud-step-count" class="hud-step-badge">Step 0 / 4</span>
+                            </div>
+                        </div>
+
+                        <!-- Playback Controls -->
+                        <div class="hud-controls-bar">
+                            <div class="playback-btn-group">
+                                <button type="button" id="anim-play-btn" class="ctrl-btn" title="Play Animation">
+                                    ▶ <span class="ctrl-label">Play</span>
+                                </button>
+                                <button type="button" id="anim-pause-btn" class="ctrl-btn" title="Pause Animation">
+                                    ⏸ <span class="ctrl-label">Pause</span>
+                                </button>
+                                <button type="button" id="anim-step-btn" class="ctrl-btn" title="Step Forward">
+                                    ⏭ <span class="ctrl-label">Step</span>
+                                </button>
+                                <button type="button" id="anim-replay-btn" class="ctrl-btn" title="Replay from Start">
+                                    🔁 <span class="ctrl-label">Replay</span>
+                                </button>
+                                <button type="button" id="anim-reset-btn" class="ctrl-btn ctrl-btn-reset" title="Reset Machine">
+                                    🔄 <span class="ctrl-label">Reset</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="diagram-wrapper">
+                        <svg class="dfa-svg" viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                    <polygon points="0 1, 8 4, 0 7" fill="#52525b"/>
+                                </marker>
+                                <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                    <polygon points="0 1, 8 4, 0 7" fill="#d4af37"/>
+                                </marker>
+                                <marker id="arrow-accept" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                    <polygon points="0 1, 8 4, 0 7" fill="#facc15"/>
+                                </marker>
+                                <marker id="arrow-dead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                    <polygon points="0 1, 8 4, 0 7" fill="#ef4444"/>
+                                </marker>
+                            </defs>
+
+                            <!-- Start Arrow to q0 -->
+                            <line x1="20" y1="90" x2="65" y2="90" class="transition-line start-line" marker-end="url(#arrow-default)"/>
+                            <text x="35" y="78" class="transition-label">Start</text>
+
+                            <!-- Forward Transitions -->
+                            <path id="edge-q0-q1" d="M 115 90 L 205 90" class="transition-edge" marker-end="url(#arrow-default)"/>
+                            <rect id="edge-box-q0-q1" x="150" y="70" width="20" height="18" rx="4" class="label-bg"/>
+                            <text id="edge-text-q0-q1" x="160" y="83" class="edge-label">c₁</text>
+
+                            <path id="edge-q1-q2" d="M 255 90 L 345 90" class="transition-edge" marker-end="url(#arrow-default)"/>
+                            <rect id="edge-box-q1-q2" x="290" y="70" width="20" height="18" rx="4" class="label-bg"/>
+                            <text id="edge-text-q1-q2" x="300" y="83" class="edge-label">c₂</text>
+
+                            <path id="edge-q2-q3" d="M 395 90 L 485 90" class="transition-edge" marker-end="url(#arrow-default)"/>
+                            <rect id="edge-box-q2-q3" x="430" y="70" width="20" height="18" rx="4" class="label-bg"/>
+                            <text id="edge-text-q2-q3" x="440" y="83" class="edge-label">c₃</text>
+
+                            <path id="edge-q3-q4" d="M 535 90 L 625 90" class="transition-edge" marker-end="url(#arrow-default)"/>
+                            <rect id="edge-box-q3-q4" x="570" y="70" width="20" height="18" rx="4" class="label-bg"/>
+                            <text id="edge-text-q3-q4" x="580" y="83" class="edge-label">c₄</text>
+
+                            <!-- Error Transitions to DEAD state -->
+                            <path id="edge-q0-dead" d="M 90 115 Q 120 180 345 200" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            <path id="edge-q1-dead" d="M 230 115 Q 260 170 345 200" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            <path id="edge-q2-dead" d="M 370 115 L 370 175" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            <path id="edge-q3-dead" d="M 510 115 Q 480 170 395 200" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            <path id="edge-q4-dead" d="M 650 115 Q 600 185 395 205" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            
+                            <!-- Dead self loop -->
+                            <path id="edge-dead-dead" d="M 350 225 C 330 255, 410 255, 390 225" class="transition-edge dead-edge" marker-end="url(#arrow-default)"/>
+                            <text x="370" y="252" class="edge-label dead-label">other</text>
+
+                            <!-- State Nodes -->
+                            <g id="node-q0" class="state-node initial-node" transform="translate(90, 90)">
+                                <circle r="25" class="state-circle outer"/>
+                                <text class="state-text">q0</text>
+                            </g>
+
+                            <g id="node-q1" class="state-node" transform="translate(230, 90)">
+                                <circle r="25" class="state-circle outer"/>
+                                <text class="state-text">q1</text>
+                            </g>
+
+                            <g id="node-q2" class="state-node" transform="translate(370, 90)">
+                                <circle r="25" class="state-circle outer"/>
+                                <text class="state-text">q2</text>
+                            </g>
+
+                            <g id="node-q3" class="state-node" transform="translate(510, 90)">
+                                <circle r="25" class="state-circle outer"/>
+                                <text class="state-text">q3</text>
+                            </g>
+
+                            <g id="node-q4" class="state-node accept-node" transform="translate(650, 90)">
+                                <circle r="27" class="state-circle outer"/>
+                                <circle r="22" class="state-circle inner"/>
+                                <text class="state-text">q4</text>
+                            </g>
+
+                            <g id="node-DEAD" class="state-node dead-node" transform="translate(370, 200)">
+                                <circle r="25" class="state-circle outer"/>
+                                <text class="state-text">DEAD</text>
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="diagram-legend">
+                        <span class="legend-item"><span class="legend-dot start"></span> Start (q0)</span>
+                        <span class="legend-item"><span class="legend-dot transition"></span> Inactive</span>
+                        <span class="legend-item"><span class="legend-dot active"></span> Active Reached</span>
+                        <span class="legend-item"><span class="legend-dot accept"></span> Accept (q4)</span>
+                        <span class="legend-item"><span class="legend-dot dead"></span> Trap (DEAD)</span>
+                    </div>
+                </div>
+
+                <!-- Change Passcode Panel -->
+                <div id="change-passcode-panel" class="card change-passcode-panel" style="display: none;">
+                    <div class="card-header">
+                        <h2><span class="section-icon">🔑</span> Change Account Passcode</h2>
+                        <button type="button" id="close-change-passcode-btn" class="btn btn-secondary btn-sm">
+                            ✖ Cancel
+                        </button>
+                    </div>
+
+                    <form id="change-passcode-form" class="auth-form" onsubmit="return false;">
+                        <div class="input-group">
+                            <label for="curr-passcode-input">Current Passcode</label>
+                            <input 
+                                type="text" 
+                                id="curr-passcode-input" 
+                                class="text-input" 
+                                placeholder="Enter current 4-character passcode" 
+                                maxlength="4"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div class="input-group">
+                            <div class="input-label-row">
+                                <label for="new-passcode-input">New Passcode</label>
+                                <span class="char-hint">0-9, a-z, A-Z, @#$%*!</span>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="new-passcode-input" 
+                                class="text-input" 
+                                placeholder="Enter new 4-character passcode" 
+                                maxlength="4"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div class="input-group">
+                            <label for="confirm-passcode-input">Confirm New Passcode</label>
+                            <input 
+                                type="text" 
+                                id="confirm-passcode-input" 
+                                class="text-input" 
+                                placeholder="Re-enter new 4-character passcode" 
+                                maxlength="4"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div id="change-passcode-msg" class="validation-msg"></div>
+
+                        <div class="button-group">
+                            <button type="submit" id="save-passcode-btn" class="btn btn-primary">
+                                Update Passcode
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Authentication & Security History View -->
+                <div id="history-panel" class="card history-panel" style="display: none;">
+                    <div class="card-header">
+                        <h2><span class="section-icon">📜</span> Security & Authentication History (<span id="history-user-label">User</span>)</h2>
+                        <button type="button" id="close-history-btn" class="btn btn-secondary btn-sm">
+                            ✖ Close History
+                        </button>
+                    </div>
+
+                    <p class="history-help-text">Click any record below to inspect and replay its exact character-by-character DFA transition path.</p>
+
+                    <div class="history-table-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date & Time</th>
+                                    <th>Event</th>
+                                    <th>Input</th>
+                                    <th>Status</th>
+                                    <th>Final State</th>
+                                    <th>State Path Traversed</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Verification Output & Execution Breakdown -->
+                <div id="results-card" class="card results-card" style="display: none;">
+                    <div class="card-header">
+                        <h2><span class="section-icon">📊</span> Verification Results</h2>
+                        <span id="final-state-badge" class="state-badge">Final: -</span>
+                    </div>
+
+                    <!-- Primary Status Banner -->
+                    <div id="status-banner" class="status-banner">
+                        <div class="status-icon-wrap" id="status-icon">🔒</div>
+                        <div class="status-content">
+                            <h3 id="status-title" class="status-title">ACCESS DENIED</h3>
+                            <p id="status-message" class="status-message">Result description</p>
+                        </div>
+                    </div>
+
+                    <!-- State Path Sequence Trail -->
+                    <div class="path-section">
+                        <span class="path-heading">State Traversal Path:</span>
+                        <div id="state-path-trail" class="state-path-trail">
+                            <!-- Populated via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Step-by-Step Transition Breakdown Table -->
+                    <div class="table-section">
+                        <span class="table-heading">Transition Log:</span>
+                        <div class="table-container">
+                            <table class="transitions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Step</th>
+                                        <th>Current State</th>
+                                        <th>Input</th>
+                                        <th>Next State</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transitions-table-body">
+                                    <!-- Populated via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Initial Idle Placeholder Card -->
+                <div id="idle-card" class="card idle-card">
+                    <div class="idle-content">
+                        <div class="idle-icon">⚡</div>
+                        <h3>Ready to Authenticate</h3>
+                        <p>Log in with your registered account or test sequences in Demo Mode to watch the animated DFA in action.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Clean Footer -->
+        <footer class="app-footer">
+            <p>StateLock &bull; Theory of Computation Semester Project &bull; Deterministic Finite Automaton Authentication</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

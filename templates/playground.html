@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFA Playground | StateLock</title>
+    <meta name="description" content="StateLock DFA Playground — build, visualize, and simulate your own Deterministic Finite Automaton interactively.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/playground.css">
+</head>
+<body class="playground-body">
+
+    <!-- HEADER -->
+    <header class="playground-header">
+        <div class="playground-header-inner">
+            <div class="brand-group">
+                <div class="brand-icon-wrap">
+                    <span class="brand-icon">⚙</span>
+                </div>
+                <div>
+                    <div class="brand-title">DFA Playground</div>
+                    <div class="brand-sub">StateLock · Theory of Computation</div>
+                </div>
+            </div>
+            <div class="user-session-bar header-nav-links">
+                <a href="/dashboard" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                    📊 Dashboard
+                </a>
+                <a href="/" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                    🔑 Authenticate
+                </a>
+                <a href="/history" class="nav-btn nav-btn-gold" style="text-decoration: none;">
+                    📜 History
+                </a>
+                <a href="/" class="nav-return-btn">
+                    🔒 Return to StateLock
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="playground-grid">
+
+        <!-- ===== LEFT PANEL: DFA BUILDER ===== -->
+        <aside class="builder-panel">
+
+            <!-- PRESETS -->
+            <section class="panel-section">
+                <h2 class="section-heading">⚡ Quick Presets</h2>
+                <div class="preset-grid">
+                    <button class="preset-dfa-btn" data-preset="binary-ends-0" title="Accepts strings over {0,1} ending in 0">
+                        Ends in 0
+                    </button>
+                    <button class="preset-dfa-btn" data-preset="binary-even" title="Accepts strings with even number of 1s">
+                        Even 1s
+                    </button>
+                    <button class="preset-dfa-btn" data-preset="ab-lang" title="Accepts strings over {a,b} starting with ab">
+                        Starts 'ab'
+                    </button>
+                    <button class="preset-dfa-btn active-preset" data-preset="user-spec" title="User specified: 0s&1s, accept strings ending with 0 processed through q0/q1">
+                        Tutorial DFA
+                    </button>
+                </div>
+            </section>
+
+            <!-- ALPHABET -->
+            <section class="panel-section">
+                <h2 class="section-heading">Σ Alphabet</h2>
+                <div class="input-row">
+                    <input type="text" id="alphabet-input" class="pg-input" maxlength="4"
+                           placeholder="Symbol (e.g. 0, a, @)" autocomplete="off" spellcheck="false">
+                    <button id="alphabet-add-btn" class="pg-btn gold-btn">Add</button>
+                </div>
+                <div id="alphabet-chips" class="chip-list"></div>
+                <div class="quick-sets">
+                    <span class="quick-label">Quick:</span>
+                    <button class="quick-set-btn" data-symbols='["0","1"]'>{0,1}</button>
+                    <button class="quick-set-btn" data-symbols='["a","b"]'>{a,b}</button>
+                    <button class="quick-set-btn" data-symbols='["0","1","2"]'>{0,1,2}</button>
+                    <button class="quick-set-btn" data-symbols='["A","B","C"]'>{A,B,C}</button>
+                </div>
+            </section>
+
+            <!-- STATES -->
+            <section class="panel-section">
+                <h2 class="section-heading">Q States</h2>
+                <div class="input-row">
+                    <input type="text" id="state-input" class="pg-input" maxlength="10"
+                           placeholder="State name (e.g. q0)" autocomplete="off" spellcheck="false">
+                    <button id="state-add-btn" class="pg-btn gold-btn">Add</button>
+                </div>
+                <div id="states-list" class="states-list"></div>
+            </section>
+
+            <!-- TRANSITIONS -->
+            <section class="panel-section">
+                <h2 class="section-heading">δ Transition Function</h2>
+                <div class="transition-form">
+                    <div class="tr-controls-grid">
+                        <div class="tr-control-cell">
+                            <label for="tr-from" class="tr-label">From State</label>
+                            <select id="tr-from" class="pg-select"><option value="">Select state</option></select>
+                        </div>
+                        <div class="tr-control-cell">
+                            <label for="tr-symbol" class="tr-label">Input Symbol</label>
+                            <select id="tr-symbol" class="pg-select"><option value="">Select symbol</option></select>
+                        </div>
+                        <div class="tr-control-cell">
+                            <label for="tr-to" class="tr-label">To State</label>
+                            <select id="tr-to" class="pg-select"><option value="">Select state</option></select>
+                        </div>
+                        <div class="tr-control-cell tr-btn-cell">
+                            <label class="tr-label tr-label-empty" aria-hidden="true">&nbsp;</label>
+                            <button id="tr-add-btn" class="pg-btn gold-btn tr-add-btn">+ Add δ</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="transitions-list" class="transitions-list"></div>
+            </section>
+
+            <!-- VALIDATE -->
+            <section class="panel-section">
+                <h2 class="section-heading">✓ Validation</h2>
+                <div id="validation-panel" class="validation-panel">
+                    <p class="validate-idle">Build your DFA above to see validation feedback.</p>
+                </div>
+            </section>
+
+        </aside>
+
+        <!-- ===== RIGHT PANEL: VISUALIZATION & SIMULATOR ===== -->
+        <div class="visualizer-panel">
+
+            <!-- DFA DIAGRAM -->
+            <section class="vis-section">
+                <div class="vis-section-header">
+                    <h2 class="section-heading no-margin">DFA State Diagram</h2>
+                    <div id="dfa-stats-row" class="dfa-stats-row"></div>
+                </div>
+                <div class="diagram-wrap" id="diagram-wrap">
+                    <div id="diagram-idle" class="diagram-idle-state">
+                        <span class="diagram-idle-icon">◉</span>
+                        <p>Add states and transitions to generate the DFA diagram.</p>
+                    </div>
+                    <svg id="dfa-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                                <polygon points="0 0, 9 3.5, 0 7" fill="#d4af37"/>
+                            </marker>
+                            <marker id="arrow-red" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                                <polygon points="0 0, 9 3.5, 0 7" fill="#ef4444"/>
+                            </marker>
+                            <marker id="arrow-green" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                                <polygon points="0 0, 9 3.5, 0 7" fill="#22c55e"/>
+                            </marker>
+                            <marker id="arrow-active" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                                <polygon points="0 0, 9 3.5, 0 7" fill="#fbbf24"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- TRANSITION TABLE -->
+            <section class="vis-section">
+                <h2 class="section-heading">δ Transition Table</h2>
+                <div class="table-wrap" id="transition-table-wrap">
+                    <p class="table-idle">Define transitions to generate the table.</p>
+                </div>
+            </section>
+
+            <!-- STRING SIMULATOR -->
+            <section class="vis-section simulator-section">
+                <h2 class="section-heading">▶ String Simulator</h2>
+                <div class="sim-form-row">
+                    <input type="text" id="pg-string-input" class="pg-input sim-input"
+                           placeholder="Enter test string (e.g. 0, 01, 101)" autocomplete="off" spellcheck="false">
+                    <button id="pg-sim-btn" class="pg-btn gold-btn">Simulate</button>
+                    <button id="pg-sim-clear-btn" class="pg-btn ghost-btn">Clear</button>
+                </div>
+                <div class="quick-strings-row">
+                    <span class="quick-label">Quick tests:</span>
+                    <button class="quick-str-btn" data-str="0">0</button>
+                    <button class="quick-str-btn" data-str="1">1</button>
+                    <button class="quick-str-btn" data-str="01">01</button>
+                    <button class="quick-str-btn" data-str="10">10</button>
+                    <button class="quick-str-btn" data-str="011">011</button>
+                    <button class="quick-str-btn" data-str="101">101</button>
+                    <button class="quick-str-btn" data-str="110">110</button>
+                    <button class="quick-str-btn" data-str="1100">1100</button>
+                </div>
+                <div id="pg-sim-validation" class="pg-sim-validation"></div>
+
+                <!-- ANIMATION HUD -->
+                <div id="pg-anim-hud" class="pg-anim-hud" style="display:none">
+                    <div class="hud-top-row">
+                        <div class="hud-symbol-stream" id="pg-symbol-stream"></div>
+                        <div class="hud-meta">
+                            <span class="hud-label">State</span>
+                            <span class="pg-hud-state" id="pg-hud-state">q0</span>
+                            <span class="hud-label step-label">Progress</span>
+                            <span class="hud-step-count" id="pg-hud-step">Step 0 / 0</span>
+                        </div>
+                    </div>
+                    <!-- Playback controls -->
+                    <div class="hud-controls">
+                        <button class="ctrl-btn play-btn" id="pg-play-btn" title="Play">▶ Play</button>
+                        <button class="ctrl-btn" id="pg-pause-btn" title="Pause">⏸ Pause</button>
+                        <button class="ctrl-btn" id="pg-step-btn" title="Step">⏭ Step</button>
+                        <button class="ctrl-btn" id="pg-replay-btn" title="Replay">🔁 Replay</button>
+                        <button class="ctrl-btn danger-btn" id="pg-reset-btn" title="Reset">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <!-- RESULTS CARD -->
+                <div id="pg-results-card" class="pg-results-card" style="display:none">
+                    <div id="pg-status-banner" class="pg-status-banner">
+                        <span id="pg-status-icon" class="status-icon-lg">🔒</span>
+                        <div>
+                            <div id="pg-status-title" class="status-title-lg">REJECTED</div>
+                            <div id="pg-status-msg" class="status-msg-sm"></div>
+                        </div>
+                        <span id="pg-final-state-badge" class="final-state-badge">Final: q0</span>
+                    </div>
+                    <div class="path-trail-wrap">
+                        <span class="quick-label">State path:</span>
+                        <div id="pg-path-trail" class="pg-path-trail"></div>
+                    </div>
+                </div>
+
+                <!-- STEP BREAKDOWN TABLE -->
+                <div id="pg-breakdown-wrap" class="pg-breakdown-wrap" style="display:none">
+                    <h3 class="breakdown-heading">Step-by-Step Execution</h3>
+                    <div class="table-wrap">
+                        <table class="pg-breakdown-table transitions-table">
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th>From</th>
+                                    <th>Symbol</th>
+                                    <th>To</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pg-breakdown-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- WARNINGS -->
+                <div id="pg-warnings-wrap" class="pg-warnings-wrap" style="display:none">
+                    <div id="pg-warnings-list" class="pg-warnings-list"></div>
+                </div>
+
+            </section>
+        </div>
+
+    </main>
+
+    <footer class="playground-footer">
+        <span>StateLock DFA Playground · Theory of Computation · 2026</span>
+    </footer>
+
+    <script src="/static/js/playground.js"></script>
+</body>
+</html>
